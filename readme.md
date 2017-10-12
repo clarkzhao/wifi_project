@@ -33,7 +33,7 @@ A榜评测时间：11月21日-12月4日，B榜评测时间：12月5日-12月11�
 | price       | Bigint | 人均消费指数      | 从人均消费额脱敏而来，越高表示本店的人均消费额越高 |
 | mall_id     | String | 店铺所在商场ID    | 已脱敏                       |
 
-### 
+
 
 ### Table 2、用户在店铺内交易表
 
@@ -45,8 +45,6 @@ A榜评测时间：11月21日-12月4日，B榜评测时间：12月5日-12月11�
 | longitude  | Double | 行为发生时位置-精度                               | 已脱敏，但相对距离依然可信                            |
 | latitude   | Double | 行为发生时位置-纬度                               | 已脱敏，但相对距离依然可信                            |
 | wifi_infos | String | 行为发生时Wifi环境，包括bssid（wifi唯一识别码），signal（强度），flag（是否连接） | 例子：b_6396480\|-67\|false;b_41124514\|-86\|false;b_28723327\|-90\|false;解释：以分号隔开的WIFI列表。对每个WIFI数据包含三项：b_6396480是脱敏后的bssid，-67是signal强度，数值越大表示信号越强，false表示当前用户没有连接此WIFI（true表示连接）。 |
-
-### 
 
 ### Table 3、评测集
 
@@ -61,8 +59,6 @@ A榜评测时间：11月21日-12月4日，B榜评测时间：12月5日-12月11�
 | longitude  | Double | 行为发生时位置-精度                               | 已脱敏，但相对距离依然可信                 |
 | latitude   | Double | 行为发生时位置-纬度                               | 已脱敏，但相对距离依然可信                 |
 | wifi_infos | String | 行为发生时Wifi环境，包括bssid（wifi唯一识别码），signal（强度），flag（是否连接） | 格式和训练数据中wifi_infos格式相同        |
-
-### 
 
 ### Table 4、选手需要提交的结果，统一命名为：result
 
@@ -84,11 +80,9 @@ A榜评测时间：11月21日-12月4日，B榜评测时间：12月5日-12月11�
 
 
 
-
-
 # 有用的链接 
 
-### 项目相关
+### 手机wifi定位相关
 
 1. [smartphone-based offline indoor location](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5375843/)
 
@@ -97,3 +91,6 @@ A榜评测时间：11月21日-12月4日，B榜评测时间：12月5日-12月11�
 
 1. [团队使用github](http://www.cnblogs.com/zhangchenliang/p/3950778.html)
 
+### 数据挖掘相关
+
+1. [爱丁堡大学数据挖掘课程代码库](https://github.com/agamemnonc/dme)
