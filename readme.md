@@ -88,6 +88,12 @@ A榜评测时间：11月21日-12月4日，B榜评测时间：12月5日-12月11�
 
 # 有用的链接 
 
+### 项目相关
+
 1. [smartphone-based offline indoor location](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5375843/)
 
+
+### 计算机相关
+
+1. [团队使用github](http://www.cnblogs.com/zhangchenliang/p/3950778.html)
 
