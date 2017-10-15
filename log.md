@@ -47,7 +47,7 @@
       *  xy 坐标，也就是地理位置
    *  输出
       *  WiFi 信号强度
-*  一个Classifier多个regression models，每个regression model 对应一个位置
+*  一个Classifier，多个regression models，每个regression model 对应一个位置
 
 2. 预测的时候
 
@@ -80,3 +80,64 @@
 2. 这时候我们就需要WiFi信息了。在训练集，用户在店交易信息中，我们有WiFi强度信号。但是我们除了经纬度，没有更精确的位置坐标了，有些店铺可能在楼上楼下，尽管店铺不同，但是经纬度是几乎一样的，当我们确定了商场以后，经纬度似乎就没有用了。在这篇论文中，每个训练样本的位置是很精确的，而且WiFi点也是固定的几个。然而我们的数据集中，同一个商场的WiFi是不是一样，有没有随机的outlier，比如别人开的热点什么的，都有待确认。
 3. ***所以目前，我觉得我可以先进行数据清洗，讲每个商场的固定的WiFi点洗出来，作为我们的Feature。***
 4. 然后可以试试用random Forest算法分类，回归什么的。
+
+
+
+
+
+## 2017-10-15 09:13:02 by SY
+
+### paper笔记
+
+#### 题目
+
+***Low-eﬀort place recognition with WiFi ﬁngerprints using deep learning***
+
+#### 主要贡献
+
+*  使用了stacked autoencoder（SAE） 的方法将WiFi强度信号特征降维，这提高了神经网络在测试集上的泛化性能。
+*  作者尝试了不同的神经网络大小，选择了最优的。***但是我们的特征空间不一样大，所有我们得自己找到更适合我们的神经网络超参数。***
+
+#### 数据集
+
+UJIIndoorLoc dataset that contains WiFi measurements used during EvAAL competition at IPIN 2015
+
+总共21048 WiFi scans that are divided into 19937 training and 1111 validation samples。
+
+这些Scans是取自西班牙某大学的建筑物里，涵盖了110000平方米的距离。***但是我们的数据集并不在一个区域内，所以可以尝试将数据集分成97个子数据集，每个子数据集对应一个mall。亦或者用one-hot的方法，将mall_id特征变成97个关于mall_id的特征，让模型自己去学习，mall_id和shop_id的相关性***
+
+总共529个特征，其中520个特征是所有可被发现的wifi信号强度。强度范围在-104dBm（最弱）到0dBm（最强）
+
+#### 目标
+
+是将结果分类成每个建筑物的楼层，如果一共有N个建筑，每个建筑i，有M_i层，那么输出神经元的个数就是：
+$$
+\sum_{i=1}^NM_i
+$$
+***我们的目标函数是每个商场的商店，这要求模型的精度会比只分类到楼层数更高，这可能会导致我们模型的效果到不如这个paper上描述的。***
+
+#### 数据预处理
+
+wifi无法被发现时，作者把强度设置成了0，后面的实验发现，设置成-110在测试集上效果更好。
+
+wifi信号强度被标准化了，标准化的方法有两种，一种是对每个wifi单独标准化，即使数据零均值，单位方差。另一种是基于所有wifi强度，**一起标准化**。
+
+***结果发现一起标准化，和把信号强度缺失值设置成-110更合理，这是我们可以借鉴的。***
+
+剩下9个特征包括了longitude and latitude of measurement, ﬂoor number, building ID, space ID, relative position, user ID, phone ID and the timestamp of the measurement。
+
+#### 训练方法
+
+先训练一个Autoencoder，Autoencoder分为encoder，decoder部分，训练完Auto恩code以后，舍弃decoder部分，在encoder后接一个全连接神经网络。图见paper。
+
+Loss：categorial cross entropy error
+
+optimizer：Adam 
+
+框架：Keras（TensorFlow）, Scikit-learn
+
+### 开发进度
+
+1. 根据店铺和商场信息表，用dictionary建立关于`shop_id`到`mall_id`的映射，取名叫`shop2mall`
+2. 根据训练集`user_train`中`shop_id`的信息，增加一列特征，增加后的新训练集叫`user_train_mall_added`
+
