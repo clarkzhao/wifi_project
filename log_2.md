@@ -1,4 +1,6 @@
-****paper 2****的要点笔记******
+ ###Date 2017-10-13###
+
+paper 2的要点笔记******
 
 ** **
 
@@ -54,7 +56,9 @@ RBFRegressor: a radial basis function network trained in a fully supervised mann
 
 ** **
 
- ** paper 3  notes important !!! **
+ ###Date 2017 10-15###
+
+** paper 3  notes important !!! **
 
 Stacked Autoencoder 能有效减少特征空间的维度通过识别关键的信息；
 
@@ -76,13 +80,13 @@ Stacked Autoencoder 能有效减少特征空间的维度通过识别关键的信
 
 首先 输入encoder的数据结构（529个维度）包括室内所有的wifi scan 信号（520个在本文中）；其他九个维度是基础信息，如latitude 和attitude and user ID 等；
 
-由于每个数据点只有一部分wifi信号可以收集的到；按此来说每个数据存在大量的维度缺少，因此使用stacked-Autoencoder变的十分合适去减少原始数据的representation；
+由于每个数据点只有一部分wifi信号可以收集的到；按此来说每个数据存在大量的维度缺少，因此使用stacked-Autoencoder变的十分合适去减少原始数据的representation；有效的提取关键信息；
 
-然后encoder的output 输入一个分类器，中途通过几层网络和处理（dropout）；最后结果是一层softmax，神经元数目等于所有大楼及层数的总和（在我们的project，相应的是所有商铺的总和）
+然后encoder的output 输入一个分类器，中途通过几层网络和处理（dropout）；最后结果是一层softmax，神经元数目等于所有大楼及层数的总和（在我们的project，相应的是所有商铺的总和）；
 
- 
+文中是用 cross entropy error 和adam 加速器；
 
-；文中是用 cross entropy error 和adam 加速器，
+
 
 Random 划分 training和validation，test data；
 
@@ -100,7 +104,17 @@ Random 划分 training和validation，test data；
 
 最好的结构及其结果如下：
 
-Stacked autoencoder 256-128-64 classifier 128 128，the scaled of lack measurements joint 有更好的效果比independent.
+Stacked autoencoder 256-128-64 classifier 128 128（但因为数据点数目及维度的不同，我们得自己设置相应的网络和神经元数目），the scaled of lack measurements joint 有更好的效果比independent.
+
+#### ~大概步骤~:###
+
+1，数据预处理，根据mall id 将 数据分组进行训练（可能性价比更高，负样本对结果影响不大相对于正样本）
+
+2，先训练一个stacked autoencoder，然后将encoder 的结果连接一个full connected的 neural network 进行训练。
+
+
+
+
 
  
 
