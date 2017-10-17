@@ -96,13 +96,23 @@ Random 划分 training和validation，test data；
 
 Stacked autoencoder 256-128-64 classifier 128 128（但因为数据点数目及维度的不同，我们得自己设置相应的网络和神经元数目），the scaled of lack measurements joint 有更好的效果比independent.
 
-#### ~大概步骤~:###
+## Date 2017-10-17##
 
-1，数据预处理，根据mall id 将 数据分组进行训练（可能性价比更高，负样本对结果影响不大相对于正样本）
+1，stacked auto 的每一层结果的激励函数由数据的性质决定选取，
 
-2，先训练一个stacked autoencoder，然后将encoder 的结果连接一个full connected的 neural network 进行训练。
+2，连接trained encoder model 与一个full connection model：在autoencoder 的非监督训练结束后，将encoder 部分的weights 导出，导入到新的classifier model 中，（导入的weights用placeholder 形式），完成新的新的训练。
+
+#### ~开发步骤ing~:###
+
+1，先训练一个stacked autoencoder，然后将encoder 的结果连接一个full connected的 neural network 进行训练。（autoencoder model的training loss 已经很小0.02，但不确定什么时候停止好）
+
+2，用上述encoder model 的weights 连接一个full connected network 后，还是不能学习，（accuracy 没有提升）
 
 
+
+# 明日计划
+
+继续debug classifier 部分，目的能达到较好的test 结果。
 
 
 
