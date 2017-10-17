@@ -141,3 +141,15 @@ optimizer：Adam
 1. 根据店铺和商场信息表，用dictionary建立关于`shop_id`到`mall_id`的映射，取名叫`shop2mall`
 2. 根据训练集`user_train`中`shop_id`的信息，增加一列特征，增加后的新训练集叫`user_train_mall_added`
 
+
+
+## 2017-10-17 11:15:13 by SY
+
+### 开发进度
+
+1. 根据mall_id将训练集分割成97组
+2. 建立了预处理数据的三个方程
+   1. `filter_bssid`用来筛选掉无效的wifi
+   2. `expand_wifi_feature`用来拓展特征空间
+   3. `standardize`用来标准化经纬度，wifi信号强度
+
