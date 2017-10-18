@@ -102,17 +102,17 @@ Stacked autoencoder 256-128-64 classifier 128 128（但因为数据点数目及�
 
 2，连接trained encoder model 与一个full connection model：在autoencoder 的非监督训练结束后，将encoder 部分的weights 导出，导入到新的classifier model 中，（导入的weights用placeholder 形式），完成新的新的训练。
 
-#### ~开发步骤ing~:###
+#### ~完成步骤~:###
 
-1，先训练一个stacked autoencoder，然后将encoder 的结果连接一个full connected的 neural network 进行训练。（autoencoder model的training loss 已经很小0.02，但不确定什么时候停止好）
-
-2，用上述encoder model 的weights 连接一个full connected network 后，还是不能学习，（accuracy 没有提升）
+1，分别构建并连接autoencoder 和 mlp classifier model
 
 
 
-# 明日计划
 
-继续debug classifier 部分，目的能达到较好的test 结果。
+
+# 明日计划（2017-10-19）
+
+继续debug classifier 部分，目的能达到较好的test(几个 mall 文件) 结果。后天查询auto-encoder 部分paper
 
 
 
