@@ -5,25 +5,31 @@ The proprocess of original file is conducted.
 The output should be the desired data for training and validation, and test
 
 Usage:
-    please go the the directory ./src/
+    # please go the the directory ./src/
     cd src/
-    python preprocess.py
+
+    # Option 1: split by mall_id
+    python preprocess.py 1 
+    # Option 2: don't split, preprocess on all training data
+    python preprocess.py 2
     
     you can change constant KEEP_PER to modify the number of wifi strength feature to expand, 
     higher the value, lower the number of features to expand.
 """
 from __future__ import division, print_function # Imports from __future__ since we're running Python 2
 import os
+import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-KEEP_PER = 1e-3
+
+KEEP_PER = 5e-4
+SEED = 123456
 
 def filter_bssid(input_df, keep_percentage = KEEP_PER):
     '''
     输出要保留的wifi特征名，保存成list输出
-    
     Args:
         input_df:
             输入数据集，pandas.DATAFRAME
@@ -39,28 +45,17 @@ def filter_bssid(input_df, keep_percentage = KEEP_PER):
     for wifi_info in input_df['wifi_infos']:
         for bssid in wifi_info.split(';'):
             bssid = bssid.split('|')[0]
-            if bssid not in wifi_counts:
-                wifi_counts[bssid] = 1
-            else:
-                wifi_counts[bssid] += 1
+            wifi_counts[bssid] = wifi_counts.setdefault(bssid, 0) + 1
+
     
+    print("total number of bssid found {0}".format(len(wifi_counts)))
     # 存放准备保留的wifi bssid
     bssids = []
     min_num_wifi = sum(wifi_counts.values())*keep_percentage
-    for key,values in wifi_counts.items():
+    for key, values in wifi_counts.items():
         if values > min_num_wifi:
             bssids.append(key)
-    
-    # i = 0
-    # counts = False
-    # for wifi_info in input_df['wifi_infos']:
-    #     for bssid in wifi_info.split(';'):
-    #         bssid, strength, _ = bssid.split('|')
-    #         if bssid in bssids:
-    #             counts = True
-    #     if counts:
-    #         i += 1
-    # print("percentage of useful wifi scans: %", i/input_df.shape[0]*100)
+    print("number of bssid kept to expand: {0}".format(len(bssids)))
     
     return bssids
 
@@ -72,18 +67,20 @@ def expand_wifi_feature(input_df, bssids):
 
     bssids: 准备拓展的bssid list
     '''
-    test = input_df.copy()
+#     test = input_df.copy()
     # 建立全部强度值为-110的wifi特征
-    wifi_features = np.zeros((test.shape[0], len(bssids)), dtype='int')
+    print(input_df.shape)
+    wifi_features = np.zeros((input_df.shape[0], len(bssids)), dtype='int')
     wifi_features += -110
-    wifi_features
     df_wifi = pd.DataFrame(wifi_features, columns = bssids)
-    df_wifi.set_index(test.index, inplace=True)
-    test = test.join(df_wifi)
+    print(df_wifi.shape)
+    df_wifi.set_index(input_df.index, inplace=True)
+    input_df = input_df.join(df_wifi)
+    print(input_df.shape)
 
     # 替换部分可被扫描的wifi信号强度为
-    for i in test.index:
-        wifi_info = test.loc[i, 'wifi_infos']   
+    for i in input_df.index:
+        wifi_info = input_df.loc[i, 'wifi_infos']   
         bssid2strength = {}
         for data in wifi_info.split(';'):
             bssid, strength, _ = data.split('|')
@@ -91,11 +88,12 @@ def expand_wifi_feature(input_df, bssids):
         all_bssid = bssid2strength.keys()
         for bssid in all_bssid:
             if bssid in bssids:
-                test.loc[i, bssid] = bssid2strength[bssid]
-    return test
+                input_df.loc[i, bssid] = bssid2strength[bssid]
+    print(input_df.shape)
+    return input_df
 
 
-def standardize(input_df):
+def standardize(input_df, bssids):
     '''
     标准化经纬度，wifi信号强度
     '''
@@ -109,6 +107,7 @@ def standardize(input_df):
     std = np.std(input_df.loc[:, cols_to_norm].as_matrix())
     input_df.loc[:, cols_to_norm] = (input_df.loc[:, cols_to_norm] - mean)/std
     input_df.loc[:, cols_to_norm] = input_df[bssids].astype('float16') #降低空间需求
+
 
 def toOneHot(input_df):
     """将string格式的class，shop_id，编码成1-of-k的形式
@@ -130,8 +129,32 @@ def toOneHot(input_df):
         one_of_k_targets[i, shop_list.index(targets[i])] = 1
     return one_of_k_targets
 
-if __name__ == '__main__':
+def mallToOneHot(input_df):
+    """将string格式的mall_id，编码成1-of-k的形式
+    Args:
+        input_df: pandas.DATAFRAME
+    
+    Returns:
+        one hot encoded mall_id
+    """
+    all_malls = input_df.loc[:,'mall_id'].values
+    num_malls = 0
+    mall_list = []
+    for mall_id in all_malls:
+        if mall_id not in mall_list:
+            mall_list.append(mall_id)
+            num_malls += 1
+    print("total number of mall_id: {0}".format(num_malls))
+    one_of_k = np.zeros((all_malls.shape[0], num_malls), dtype='int')
+    for i in range(all_malls.shape[0]):
+        one_of_k[i, mall_list.index(all_malls[i])] = 1
+        
+    df_one_of_k = pd.DataFrame(one_of_k, columns = mall_list)
+    df_one_of_k.set_index(input_df.index, inplace=True)
+    input_df = input_df.join(df_one_of_k)
+    return input_df
 
+def main(argv):
     print("=========== Starts loading original data ===========")
     shop_path = os.path.join(os.path.dirname(os.getcwd()), 'data', 'ccf_first_round_shop_info.csv')
     user_path = os.path.join(os.path.dirname(os.getcwd()), 'data', 'ccf_first_round_user_shop_behavior.csv')
@@ -166,24 +189,54 @@ if __name__ == '__main__':
         mall_id.append(shop2mall[shop_id])
     # 在user_train中增加一个feature，mall_id，新的训练集叫user_train_mall_added
     user_train_mall_added = user_train.assign(mall_id=mall_id)
+    del user_train
     print("The shape of the data after assigning the mall id  is: {0} \n".format(user_train_mall_added.shape))
 
+    assert(argv in ['1', '2']), ('the input argument should be either 1 or 2.')
 
-    print("=========== Starts Slicing the original data by mall_id ===========")
-    # 根据mall_id切割训练集
-    user_train_grouped = user_train_mall_added.groupby('mall_id')
-    train_sets = []
-    print("mall id, shape")
-    for mall_id in unique_mall:
-        train_sets.append(user_train_grouped.get_group(mall_id))
-        print(mall_id, train_sets[-1].shape)
+    if argv == '1':
+        print("=========== Starts Option 1: Slicing data by mall_id ===========")
+        print("=========== Starts Slicing the original data by mall_id ===========")
+        # 根据mall_id切割训练集
+        user_train_grouped = user_train_mall_added.groupby('mall_id')
+        train_sets = []
+        print("mall id, shape")
+        for mall_id in unique_mall:
+            train_sets.append(user_train_grouped.get_group(mall_id))
+            print(mall_id, train_sets[-1].shape)
     
-    print("=========== Starts preprocess and output data as CSV file for training and validation  ===========")
-    # 对每个训练集输出成csv
-    for df in train_sets[1:2]:
-        bssids = filter_bssid(df)
-        df = expand_wifi_feature(df, bssids)
-        standardize(df)
-        path = os.path.join(os.path.dirname(os.getcwd()), 'data', df.iloc[-1,6]+'.csv')
-        df.to_csv(path)
-        print("Successfully stored data as {0} with shape of {1}".format(path, df.shape))
+        print("=========== Starts preprocess and output data as CSV file for training and validation  ===========")
+        # 对每个训练集输出成csv, 包括总的数据，train sets，validation sets
+        for df in train_sets:
+            bssids = filter_bssid(df)
+            df = expand_wifi_feature(df, bssids)
+            standardize(df, bssids)
+            path = os.path.join(os.path.dirname(os.getcwd()), 'data', df.iloc[-1,6]+'.csv')
+            df.to_csv(path)            
+            print("Successfully stored data as {0} with shape of {1}".format(path, df.shape))
+            split_number=int(np.floor(df.shape[0]*0.8))
+            print('split number for train and valid: ', split_number)
+            train_df = df.iloc[0:split_number]
+            path = os.path.join(os.path.dirname(os.getcwd()), 'data', df.iloc[-1,6] + '-train.csv')
+            train_df.to_csv(path)
+            print("Successfully stored training data as {0} with shape of {1}".format(path, train_df.shape))
+            valid_df = df.iloc[split_number:]
+            path = os.path.join(os.path.dirname(os.getcwd()), 'data', df.iloc[-1,6] + '-valid.csv')
+            print("Successfully stored valid data as {0} with shape of {1}".format(path, valid_df.shape))
+            valid_df.to_csv(path)
+            del df, train_df, valid_df
+    else:
+        print("=========== Starts Option 2: Using the whole data sets ===========")
+        user_train_mall_added = mallToOneHot(user_train_mall_added)
+        print("=========== Successfully one-hot-encoded mall_id, the data shape becomes: {0} ===========".format(user_train_mall_added.shape))
+        bssids = filter_bssid(user_train_mall_added)
+        user_train_mall_added = expand_wifi_feature(user_train_mall_added, bssids)
+        print("=========== Successfully expand wifi features ===========")
+        standardize(user_train_mall_added, bssids)
+        print("=========== Successfully standardizing numerical data ===========")
+        path = os.path.join(os.path.dirname(os.getcwd()), 'data', 'all_data.csv')
+        user_train_mall_added.to_csv(path)
+        print("Successfully stored data as {0} with shape of {1}".format(path, user_train_mall_added.shape))
+
+if __name__ == '__main__':
+    main(sys.argv[1])

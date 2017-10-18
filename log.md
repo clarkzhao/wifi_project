@@ -153,3 +153,46 @@ optimizer：Adam
    2. `expand_wifi_feature`用来拓展特征空间
    3. `standardize`用来标准化经纬度，wifi信号强度
 
+
+
+
+## 2017-10-18 23:15:05 by SY
+
+### 开发进度
+
+所有代码基于python 2.7
+
+### Preprocess.py
+
+1. Option 1可以让你预处理根据shop_id分割的小数据集，可以更改第`210`行代码的for循环，少量的，预处理一部分shop_mall。比如变成`for df in train_sets[:1]:`就可以只预处理第一组子数据集。若不改，就是输出所以子数据集，会跑的比较长。
+2. Option 2 是预处理整体的数据集，目前数据集太大，内存爆炸，电脑不会跑出结果。可行的解决方案是分割整体数据集，一小份一小份输出。目前不建议尝试。
+3. 更改KEEP_PER，可以改变空间的大小，具体请看注释。
+
+#### model_by_sy.py
+
+1. 我的深度学习训练代码。
+
+#### Data_providers.py
+
+    1.  我将我们深度学习课程的data_providers稍作改动，创建了类 WIFIDataProviders
+
+    2.  这个类可以比较方便的读取数据，数据目前存储比较笨，要三份，一份整体数据，一份train，一份valid，主要原因是，我需要one-hot所有的shop_id，所以必须要一份整体的数据。这三份数据可以用preprocess.py文件输出。
+
+    3.  具体使用的时候
+
+      *  `train_data = data_providers.WIFIDataProvider(mall_id, 'train', batch_size=64)`
+      *  这里，mall_id可以是比如‘m_625’，‘train’指定了是训练集，变成‘valid’就是验证集了，batch_size也可以选
+      *  `train_data.next()`可以输出下一个batch的inputs和targets，targets自动one-hot
+      *  也可以用这种pythonic的代码`for input_batch, target_batch in train_data：`循环遍历整个训练集。具体见`model_by_sy.py`
+
+
+
+### 明日计划
+
+1. 分割evaluation数据集（根据mall_id）。
+2. 用最简单的mlp模型训练97次，保存97个模型。
+3. 用97个模型，分别预测分割好的evaluation数据集，整合预测结果，上传测评。
+
+### Feedback to xiaohao:
+
+1. 那就照你说的做吧，研究一下VAE，而我就不和你看重复的了，我后天如何用集成学习（Boost等等）训练多个小模型，最后集合成一个强模型（这个方法在数据比赛中非常常用），以及Cross validation等等的方法。

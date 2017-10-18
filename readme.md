@@ -95,4 +95,6 @@ A榜评测时间：11月21日-12月4日，B榜评测时间：12月5日-12月11�
 
 1. [爱丁堡大学数据挖掘课程代码库](https://github.com/agamemnonc/dme)
 2. [常用的特征工程技巧](https://zhuanlan.zhihu.com/p/26444240)
+3. [一个大神的数据挖掘代码以及解释，推荐看PPD_RiskControlCompetition这个仓库](https://github.com/wepe)
+
 
