@@ -5,10 +5,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import data_providers
+import datetime
 
-def train(mall_id, 
+
+def train(mall_id, timestamp,
         learning_rate=1e-3, 
-        num_epoch = 50, 
+        num_epoch = 20, 
         num_hidden_1 = 256):
 
     def fully_connected_layer(inputs, input_dim, output_dim, nonlinearity=tf.nn.relu):
@@ -55,6 +57,17 @@ def train(mall_id,
         # Merge all summaries into a single op
         summary_op = tf.summary.merge_all()
             
+        # create objects for writing summaries and checkpoints during training
+        
+        exp_dir = os.path.join(os.path.dirname(os.getcwd()), 'data', 'saved_models')
+        checkpoint_dir = os.path.join(exp_dir, timestamp, 'checkpoints')
+        if not os.path.exists(exp_dir):
+            os.makedirs(exp_dir)
+        if not os.path.exists(checkpoint_dir):
+            os.makedirs(checkpoint_dir)
+        # train_writer = tf.summary.FileWriter(os.path.join(exp_dir, 'train-summaries'))
+        # valid_writer = tf.summary.FileWriter(os.path.join(exp_dir, 'valid-summaries'))
+
         init = tf.global_variables_initializer()
         
     #     log_dir = os.path.join(os.path.dirname(os.getcwd()), '', 'ccf_first_round_shop_info.csv')
@@ -66,43 +79,89 @@ def train(mall_id,
         valid_inputs = valid_data.inputs
         valid_targets = valid_data.to_one_of_k(valid_data.targets)
         sess.run(init)
-        run_stats = []
+
+        # 'Saver' op to save and restore all the variables
+        saver = tf.train.Saver(max_to_keep=1)
+
+        train_accuracy = np.zeros(num_epoch)
+        train_error = np.zeros(num_epoch)
+        valid_accuracy = np.zeros(num_epoch)
+        valid_error = np.zeros(num_epoch)
+        time_cost = np.zeros(num_epoch)
+
+
         for e in range(num_epoch):
-            train_err = 0.
-            train_acc = 0.
             #Training sets
+            best_epoch = 0
             for b, (input_batch, target_batch) in enumerate(train_data):
                 index = e * train_data.num_batches + b
                 _, batch_error, batch_acc, summary = sess.run(
                     [train_step, error, accuracy, summary_op], 
                     feed_dict={inputs: input_batch, targets: target_batch})
     #             train_writer.add_summary(summary, index)
-                train_err += batch_error
-                train_acc += batch_acc
+                # train_err += batch_error
+                # train_acc += batch_acc
+                # train_writer.add_summary(summary, step)
+                train_error[e] += batch_error
+                train_accuracy[e] += batch_acc
     #             if index % 50 == 0:
     #                 valid_summary = sess.run(
     #                 summary_op, feed_dict={inputs: valid_inputs, targets: valid_targets})
     #                 valid_writer.add_summary(valid_summary, index)
-            train_err /= train_data.num_batches
-            train_acc /= train_data.num_batches
+            # train_err /= train_data.num_batches
+            # train_acc /= train_data.num_batches
+                    # normalise running means by number of batches
+            train_error[e] /= train_data.num_batches
+            train_accuracy[e] /= train_data.num_batches
             # Validation on model when finishing one epoch 
-            valid_err, valid_acc = sess.run([error, accuracy], 
+            valid_error[e], valid_accuracy[e] = sess.run([error, accuracy], 
                                             feed_dict={inputs: valid_inputs, targets: valid_targets})
             if e % 5 == 0:
                 print('End of epoch {0:02d}: err(train)={1:.4f} acc(train)={2:.4f}'
-                        .format(e + 1, train_err, train_acc))
+                        .format(e + 1, train_error[e], train_accuracy[e]))
                 print('                 err(valid)={0:.4f} acc(valid)={1:.4f}'
-                        .format(valid_err, valid_acc))
-            run_stats.append([train_err, train_acc, valid_err, valid_acc])
-        return run_stats
+                        .format(valid_error[e], valid_accuracy[e]))
+            
+            if valid_error[e] <= np.amin(valid_error[:e+1]):
+                print("found better model")
+                print("      validation error: ", valid_error[e])
+                print("      validation accuracy: ", valid_accuracy[e])
+                saver.save(sess, os.path.join(checkpoint_dir, mall_id, 'model.ckpt'))
+                print("saved model")
+                # Save model weights to disk
+        np.savez_compressed(
+            os.path.join(checkpoint_dir, mall_id, 'run.npz'),
+            train_error=train_error,
+            train_accuracy=train_accuracy,
+            valid_error=valid_error,
+            valid_accuracy=valid_accuracy,
+            time_cost = time_cost
+        )
+        return valid_error, valid_accuracy
 
 if __name__ == '__main__':
-    valid_mall_id = ['m_6587', 'm_625', 'm_2182']
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    valid_mall_id = ['m_690', 'm_6587', 'm_5892', 'm_625', 'm_3839', 'm_3739', 
+                            'm_1293', 'm_1175', 'm_2182', 'm_2058', 'm_3871', 'm_3005', 
+                            'm_822', 'm_2467', 'm_4406', 'm_909', 'm_4923', 'm_2224', 
+                            'm_2333', 'm_4079', 'm_5085', 'm_2415', 'm_4543', 'm_7168', 
+                            'm_2123', 'm_4572', 'm_1790', 'm_3313', 'm_4459', 'm_1409', 
+                            'm_979', 'm_7973', 'm_1375', 'm_4011', 'm_1831', 'm_4495', 
+                            'm_1085', 'm_3445', 'm_626', 'm_8093', 'm_4828', 'm_6167', 
+                            'm_3112', 'm_4341', 'm_622', 'm_4422', 'm_2267', 'm_615', 
+                            'm_4121', 'm_9054', 'm_4515', 'm_1950', 'm_3425', 'm_3501', 
+                            'm_4548', 'm_5352', 'm_3832', 'm_1377', 'm_1621', 'm_1263', 
+                            'm_2578', 'm_2270', 'm_968', 'm_1089', 'm_7374', 'm_2009', 
+                            'm_6337', 'm_7601', 'm_623', 'm_5154', 'm_5529', 'm_4168', 
+                            'm_3916', 'm_2878', 'm_9068', 'm_3528', 'm_4033', 'm_3019', 
+                            'm_1920', 'm_8344', 'm_6803', 'm_3054', 'm_8379', 'm_1021', 
+                            'm_2907', 'm_4094', 'm_4187', 'm_5076', 'm_3517', 'm_2715', 
+                            'm_5810', 'm_5767', 'm_4759', 'm_5825', 'm_7994', 'm_7523', 
+                            'm_7800']
     for mall_id in valid_mall_id:
         print("================ Start training for mall: {0} ================".format(mall_id))
-        stats = train(mall_id)
-        stats = np.array(stats)
+        valid_error, valid_accuracy = train(mall_id, timestamp)
         print("================ End training for mall: {0} ================".format(mall_id))
-        print("best valid error: ", np.amin(stats[:,2]))
-        print("best valid accuracy: ", np.amax(stats[:,3]))
+        print("best valid error: ", np.amin(valid_error))
+        print("best valid accuracy: ", np.amax(valid_accuracy))
         
