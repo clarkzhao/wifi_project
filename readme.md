@@ -80,6 +80,80 @@ A榜评测时间：11月21日-12月4日，B榜评测时间：12月5日-12月11�
 
 
 
+## Setting up for personal machine (OS X / Ubuntu)
+
+1. If you are using a personal machine, you can choose whether to do as above or use the Anaconda distribution (Python version 2.7, choose the appropriate installer according to your operating system). Anaconda is a standard set of packages used in scientific computing which the Anaconda team curate to keep them consistent.
+
+2. Once the installation is complete, It's also recommended that you set up a conda environment for this project. This way, if you update anything in your anaconda base install, this environment will remain unchanged. To create a conda (virtual) environment called `wifi_env`, open a Terminal (or Command Prompt window if you are running Windows) and type:
+
+   ```bash
+   conda create -n wifi_env python=2.7 numpy scipy    matplotlib pandas jupyter scikit-learn=0.18.1 pip
+   ```
+
+
+3. Activate the conda environment (don't forget to repeat this step every time you begin work from a new terminal):
+
+  ```bash
+  source activate wifi_env
+  ```
+
+4. Install tensorflow
+
+  ```bash
+  pip install --upgrade tensorflow      # for Python 2.7
+  ```
+
+5. To recover disk space we can clear the package tarballs Conda just downloaded:
+
+  ```bash
+  conda clean -t
+  ```
+6. Once you have finished installed everything, downlaod the repository from git:
+
+  ```bash
+  cd ~
+  git clone https://github.com/<YOURNAME>/wifi_project
+
+  cd ~/wifi_project
+
+  # creates date which is ignored by .gitignore
+  mkdir data 
+
+  # Downloads the three file from official websites
+
+
+  # just as a reminder that every time you run a python scripts please make sure the current diretory is in ~/wifi_project/src/ otherwise, the data file cannot be found since we don't have a system envrionment for DATA directory
+  cd src
+
+  # explore the notebooks
+  jupyter notebook 
+
+  # preprocessing the original data
+  python preprocess.py 1
+
+  # preprocessing the evlauation data
+  python preprocess.py 3
+
+  # Option 2 takes too much memory to run..
+
+  # train the model and save models to data/saved_models/<timestamp>/<mall_id>
+  python model_by_sy.py
+
+  # evaluate the saved model and output the prediction for evaluation 
+  # you should have the specified the <timestamp> generated from training. Then the ouput file will be at data/predictions/<new-timestamp>/all-eval.csv
+  python eval.py '2017-10-19_14-36-17'
+
+  source deactivate
+  ```
+
+
+
+
+
+
+
+
+
 # 有用的链接 
 
 ### 手机wifi定位相关
