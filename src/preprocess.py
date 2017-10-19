@@ -12,6 +12,9 @@ Usage:
     python preprocess.py 1 
     # Option 2: don't split, preprocess on all training data
     python preprocess.py 2
+    # Option 3: preprocess evaluation data, 
+    #           pre-requirements is all train/valid data has been splitted to desired directory
+    python preprocess.py 3
     
     you can change constant KEEP_PER to modify the number of wifi strength feature to expand, 
     higher the value, lower the number of features to expand.
