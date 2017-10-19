@@ -1,5 +1,64 @@
 [TOC]
 
+# 模型表现
+
+### DNN-MLP classifier
+
+*  2017年10月19日，晚
+
+
+*  ***天池测试准确率： 0.8375***
+
+*  输入
+
+   *  子数据集，根据mall_id分割的
+
+   *  数据集
+
+      *  训练集，前80%的子数据集
+
+
+      *  验证集，后20%的子数据集
+      *  每个子数据集的所以wifi信号强度一起标准化
+      *  只包含wifi features
+
+   *  预测集
+
+      *  同样根据mall_id分割成子集。
+      *  每个子集和数据集同样预处理
+
+*  结构
+
+   *  input layer: (***batch_size***=64, num_input_feature)
+   *  hidden layer 1: (num_input_feature, ***num_hidden_1*** = 256)
+   *  Dropout: (***keep_probability*** = 0.8)
+   *  hidden layer 2: (***num_hidden_1***=256, ***num_hidden_2*** = 128)
+   *  output layer: (***num_hidden*_2**=128, num_output)
+
+*  模型参数
+
+   *  ***learning rate*** 1e-3
+   *  ***number of epoch per training*** = 10
+   *  weight initializer: `tf.truncated_normal([input_dim, output_dim], stddev=2. / (input_dim + output_dim)**0.5),  'weights')`
+
+### 可提升空间
+
+1. 使用Stacked autoencoder
+
+2. 加入经纬度特征
+
+3. 训练集进行cross-validation
+
+4. 集成学习
+
+5. K-nearest-neibour
+
+   ​
+
+
+
+
+
 # 项目简介
 
 ## [商场中精确定位用户所在店铺](https://tianchi.aliyun.com/competition/introduction.htm?spm=5176.100066.0.0.35ed5dcatQsSbv&raceId=231620)
@@ -93,60 +152,59 @@ A榜评测时间：11月21日-12月4日，B榜评测时间：12月5日-12月11�
 
 3. Activate the conda environment (don't forget to repeat this step every time you begin work from a new terminal):
 
-  ```bash
-  source activate wifi_env
-  ```
+    ```bash
+    source activate wifi_env
+    ```
 
 4. Install tensorflow
 
-  ```bash
-  pip install --upgrade tensorflow      # for Python 2.7
-  ```
+    ```bash
+    pip install --upgrade tensorflow      # for Python 2.7
+    ```
 
 5. To recover disk space we can clear the package tarballs Conda just downloaded:
 
-  ```bash
-  conda clean -t
-  ```
-6. Once you have finished installed everything, downlaod the repository from git:
+    ```bash
+    conda clean -t
+    ```
 
-  ```bash
-  cd ~
-  git clone https://github.com/<YOURNAME>/wifi_project
+6. Once you have finished installed everything, downlaod the repository from git: 
 
-  cd ~/wifi_project
+    ```bash
+    cd ~
+    git clone https://github.com/<YOURNAME>/wifi_project
 
-  # creates date which is ignored by .gitignore
-  mkdir data 
+    cd ~/wifi_project
 
-  # Downloads the three file from official websites
+    # creates date which is ignored by .gitignore
+    mkdir data 
 
+    # Downloads the three file from official websites
+    # just as a reminder that every time you run a python scripts please make sure the current diretory is in ~/wifi_project/src/ otherwise, the data file cannot be found since we don't have a system envrionment for DATA directory
+    cd src
 
-  # just as a reminder that every time you run a python scripts please make sure the current diretory is in ~/wifi_project/src/ otherwise, the data file cannot be found since we don't have a system envrionment for DATA directory
-  cd src
+    # explore the notebooks
+    jupyter notebook 
 
-  # explore the notebooks
-  jupyter notebook 
+    # preprocessing the original data
+    python preprocess.py 1
 
-  # preprocessing the original data
-  python preprocess.py 1
+    # preprocessing the evlauation data
+    python preprocess.py 3
 
-  # preprocessing the evlauation data
-  python preprocess.py 3
+    # Option 2 takes too much memory to run..
 
-  # Option 2 takes too much memory to run..
+    # train the model and save models to data/saved_models/<timestamp>/<mall_id>
+    python model_by_sy.py
 
-  # train the model and save models to data/saved_models/<timestamp>/<mall_id>
-  python model_by_sy.py
+    # evaluate the saved model and output the prediction for evaluation 
+    # you should have the specified the <timestamp> generated from training. Then the ouput file will be at data/predictions/<new-timestamp>/all-eval.csv
+    python eval.py '2017-10-19_14-36-17'
 
-  # evaluate the saved model and output the prediction for evaluation 
-  # you should have the specified the <timestamp> generated from training. Then the ouput file will be at data/predictions/<new-timestamp>/all-eval.csv
-  python eval.py '2017-10-19_14-36-17'
+    source deactivate ```
+    ```
 
-  source deactivate
-  ```
-
-
+    ​
 
 
 
@@ -164,6 +222,7 @@ A榜评测时间：11月21日-12月4日，B榜评测时间：12月5日-12月11�
 ### 计算机相关
 
 1. [团队使用github](http://www.cnblogs.com/zhangchenliang/p/3950778.html)
+2. [优美的Markdown 编辑器](http://www.typora.io/)
 
 ### 数据挖掘相关
 
