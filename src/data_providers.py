@@ -138,13 +138,14 @@ class DataProvider(object):
 class WIFIDataProvider(DataProvider):
     """Data provider for WiFi project data information."""
 
-    def __init__(self, mall_id, which_set='train', batch_size=128, max_num_batches=-1,
+    def __init__(self, mall_id, which_set='train', is_eval=False, batch_size=128, max_num_batches=-1,
                  shuffle_order=True, rng=None):
         """Create a new WiFi data provider object.
         Args:
             mall_id: The mall_id that is used to locate the sub-data sets.
             which_set: One of 'train', 'valid' or 'eval'. Determines which
                 portion of the WiFi data this object should provide.
+            is_eval: whether the datasets is for evaluation
             batch_size (int): Number of data points to include in each batch.
             max_num_batches (int): Maximum number of batches to iterate over
                 in an epoch. If `max_num_batches * batch_size > num_data` then
@@ -177,12 +178,16 @@ class WIFIDataProvider(DataProvider):
                                'Expected mall to be in {0} '
                                'Got {1}'.format(valid_mall_id, mall_id)
                            )
-
-        assert which_set in ['train', 'valid'], (
-            'Expected which_set to be either train, valid. '
-            'Got {0}'.format(which_set)
-        )
-
+        if not is_eval:
+            assert which_set in ['train', 'valid'], (
+                'Expected which_set to be either train, valid, eval. '
+                'Got {0}'.format(which_set)
+            )
+        else:
+            assert which_set == 'eval', (
+                'Expected which_set to be eval. '
+                'Got {0}'.format(which_set)
+            )
         self.which_set = which_set
         self.mall_id = mall_id
         # construct path to data using os.path.join to ensure the correct path
@@ -194,6 +199,7 @@ class WIFIDataProvider(DataProvider):
         assert os.path.isfile(data_path), (
             'Data file does not exist at expected path: ' + data_path
         )
+
 
         # load data from compressed numpy file
         loaded = pd.read_csv(data_path, delimiter = ',')
@@ -212,8 +218,14 @@ class WIFIDataProvider(DataProvider):
 #         )  
         
         inputs = loaded.iloc[:, 8:].values # the inputs is just wifi information and they are in the columns of [:, 8:]
-        targets = loaded.loc[:, 'shop_id'].values
-        self.one_of_k_targets = self.to_one_of_k(targets)
+        self.row_id = None
+        if not is_eval:
+            targets = loaded.loc[:, 'shop_id'].values
+            self.one_of_k_targets = self.to_one_of_k(targets)
+        else:
+            targets = np.zeros([inputs.shape[0]])
+            self.one_of_k_targets = np.zeros([inputs.shape[0], self.num_classes])
+            self.row_id = loaded.loc[:, 'row_id'].values
         inputs = inputs.astype(np.float32)
         # pass the loaded data to the parent class __init__
         super(WIFIDataProvider, self).__init__(
