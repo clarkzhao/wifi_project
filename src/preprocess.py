@@ -154,60 +154,28 @@ def mallToOneHot(input_df):
     input_df = input_df.join(df_one_of_k)
     return input_df
 
-def main(argv):
-    print("=========== Starts loading original data ===========")
-    shop_path = os.path.join(os.path.dirname(os.getcwd()), 'data', 'ccf_first_round_shop_info.csv')
-    user_path = os.path.join(os.path.dirname(os.getcwd()), 'data', 'ccf_first_round_user_shop_behavior.csv')
-    eval_path = os.path.join(os.path.dirname(os.getcwd()), 'data', 'evaluation_public.csv')
+def slice_and_output(input_df, unique_mall, is_eval=False):
+    '''
+        根据mall_id切割数据，
+        如果是evaluation sets，保存成一个文件，后缀为‘-eval.csv’，
+        否则保存成三个csv文件
+    '''
+    print("=========== Starts Option 1: Slicing data by mall_id ===========")
+    print("=========== Starts Slicing the original data by mall_id ===========")
+    # 根据mall_id切割训练集
+    input_df_grouped = input_df.groupby('mall_id')
+    train_sets = []
+    print("mall id, shape")
+    for mall_id in unique_mall:
+        train_sets.append(input_df_grouped.get_group(mall_id))
+        print(mall_id, train_sets[-1].shape)
 
-    shop_train = pd.read_csv(shop_path, delimiter=',')
-    user_train = pd.read_csv(user_path, delimiter=',')
-    evaluation_data = pd.read_csv(eval_path, delimiter=',')
-
-    print("=========== Successfully loading original data ===========")
-    print("The shape of the original data of user shop behavior is: {0} \n".format(user_train.shape),
-        "The shape of the original data for evaluation is: {0}".format(evaluation_data.shape))
-
-    print("=========== Stats detecting the total number of malls ===========")
-    # 检测有多少个商场，以及他们的名字
-    unique_mall = []
-    idx = 0
-    for i in range(len(shop_train['mall_id'])):
-        if shop_train['mall_id'][i] not in unique_mall:
-            unique_mall.append(shop_train['mall_id'][i])
-            idx += 1
-    print("There are a total number of {0} malls and they are:".format(len(unique_mall)))
-    print(unique_mall)
-
-
-    print("=========== Starts creating mall feature in the original data ===========")
-    # 建立shop_id 到mall_id的映射
-    shop2mall = shop_train.set_index('shop_id').to_dict()['mall_id']
-    # 在user_train数据集中，根据shop2mall新建一个叫mall_id的特征
-    mall_id = []
-    for shop_id in user_train['shop_id']:
-        mall_id.append(shop2mall[shop_id])
-    # 在user_train中增加一个feature，mall_id，新的训练集叫user_train_mall_added
-    user_train_mall_added = user_train.assign(mall_id=mall_id)
-    del user_train
-    print("The shape of the data after assigning the mall id  is: {0} \n".format(user_train_mall_added.shape))
-
-    assert(argv in ['1', '2']), ('the input argument should be either 1 or 2.')
-
-    if argv == '1':
-        print("=========== Starts Option 1: Slicing data by mall_id ===========")
-        print("=========== Starts Slicing the original data by mall_id ===========")
-        # 根据mall_id切割训练集
-        user_train_grouped = user_train_mall_added.groupby('mall_id')
-        train_sets = []
-        print("mall id, shape")
-        for mall_id in unique_mall:
-            train_sets.append(user_train_grouped.get_group(mall_id))
-            print(mall_id, train_sets[-1].shape)
-    
-        print("=========== Starts preprocess and output data as CSV file for training and validation  ===========")
-        # 对每个训练集输出成csv, 包括总的数据，train sets，validation sets
-        for df in train_sets:
+    print("=========== Starts preprocess and output data as CSV file for training and validation  ===========")
+    # 对每个训练集输出成csv, 包括总的数据，train sets，validation sets
+    for df in train_sets[1:]:
+        print("=========== Process mall: {0}  ===========".format(df.iloc[-1,6]))
+        if not is_eval:
+            # valid or train sets 
             bssids = filter_bssid(df)
             df = expand_wifi_feature(df, bssids)
             standardize(df, bssids)
@@ -225,18 +193,115 @@ def main(argv):
             print("Successfully stored valid data as {0} with shape of {1}".format(path, valid_df.shape))
             valid_df.to_csv(path)
             del df, train_df, valid_df
-    else:
-        print("=========== Starts Option 2: Using the whole data sets ===========")
-        user_train_mall_added = mallToOneHot(user_train_mall_added)
-        print("=========== Successfully one-hot-encoded mall_id, the data shape becomes: {0} ===========".format(user_train_mall_added.shape))
-        bssids = filter_bssid(user_train_mall_added)
-        user_train_mall_added = expand_wifi_feature(user_train_mall_added, bssids)
-        print("=========== Successfully expand wifi features ===========")
-        standardize(user_train_mall_added, bssids)
-        print("=========== Successfully standardizing numerical data ===========")
-        path = os.path.join(os.path.dirname(os.getcwd()), 'data', 'all_data.csv')
-        user_train_mall_added.to_csv(path)
-        print("Successfully stored data as {0} with shape of {1}".format(path, user_train_mall_added.shape))
+        else:
+            # evaluation sets 
 
+            # get bssids from csv, chose valid because of smalle size 
+            path_valid = os.path.join(os.path.dirname(os.getcwd()), 'data', df.iloc[-1,6] + '-valid.csv')
+            valid_data = pd.read_csv(path_valid, delimiter=',')
+            print("=========== Successfully loading valid data ===========")
+            bssids = list(valid_data.iloc[:,8:])
+            del valid_data
+            # expand features and standardize
+            df = expand_wifi_feature(df, bssids)
+            standardize(df, bssids)
+
+            # output to csv
+            path = os.path.join(os.path.dirname(os.getcwd()), 'data', df.iloc[-1,6] + '-eval.csv')
+            df.to_csv(path)            
+            print("Successfully stored data as {0} with shape of {1}".format(path, df.shape))
+
+def main(argv):
+    assert(argv in ['1', '2', '3']), (
+        'the input argument should be either 1 or 2 or 3.')
+    if argv in ['1', '2']:
+        print("=========== Starts loading original data ===========")
+        shop_path = os.path.join(os.path.dirname(os.getcwd()), 'data', 'ccf_first_round_shop_info.csv')
+        user_path = os.path.join(os.path.dirname(os.getcwd()), 'data', 'ccf_first_round_user_shop_behavior.csv')
+
+        shop_train = pd.read_csv(shop_path, delimiter=',')
+        user_train = pd.read_csv(user_path, delimiter=',')
+
+        print("=========== Successfully loading original data ===========")
+        print("The shape of the original data of user shop behavior is: {0} \n".format(user_train.shape))
+
+        print("=========== Stats detecting the total number of malls ===========")
+        # 检测有多少个商场，以及他们的名字
+        unique_mall = []
+        idx = 0
+        for i in range(len(shop_train['mall_id'])):
+            if shop_train['mall_id'][i] not in unique_mall:
+                unique_mall.append(shop_train['mall_id'][i])
+                idx += 1
+        print("There are a total number of {0} malls and they are:".format(len(unique_mall)))
+        print(unique_mall)
+
+
+        print("=========== Starts creating mall feature in the original data ===========")
+        # 建立shop_id 到mall_id的映射
+        shop2mall = shop_train.set_index('shop_id').to_dict()['mall_id']
+        # 在user_train数据集中，根据shop2mall新建一个叫mall_id的特征
+        mall_id = []
+        for shop_id in user_train['shop_id']:
+            mall_id.append(shop2mall[shop_id])
+        # 在user_train中增加一个feature，mall_id，新的训练集叫user_train_mall_added
+        user_train_mall_added = user_train.assign(mall_id=mall_id)
+        del user_train
+        print("The shape of the data after assigning the mall id  is: {0} \n".format(user_train_mall_added.shape))
+
+        if argv == '1':
+            slice_and_output(user_train_mall_added, unique_mall)
+        else:
+            print("=========== Starts Option 2: Using the whole data sets ===========")
+            user_train_mall_added = mallToOneHot(user_train_mall_added)
+            print("=========== Successfully one-hot-encoded mall_id, the data shape becomes: {0} ===========".format(user_train_mall_added.shape))
+            bssids = filter_bssid(user_train_mall_added)
+            user_train_mall_added = expand_wifi_feature(user_train_mall_added, bssids)
+            print("=========== Successfully expand wifi features ===========")
+            standardize(user_train_mall_added, bssids)
+            print("=========== Successfully standardizing numerical data ===========")
+            path = os.path.join(os.path.dirname(os.getcwd()), 'data', 'all_data.csv')
+            user_train_mall_added.to_csv(path)
+            print("Successfully stored data as {0} with shape of {1}".format(path, user_train_mall_added.shape))
+
+    else:
+        print("=========== Starts loading evaluation data ===========")
+        eval_path = os.path.join(os.path.dirname(os.getcwd()), 'data', 'evaluation_public.csv')
+        evaluation_data = pd.read_csv(eval_path, delimiter=',')
+
+        print("=========== Successfully loading evaluation data ===========")
+        print("The shape of the evaluation data of user shop behavior is: {0} \n".format(evaluation_data.shape))
+
+        # move mall_id col to the last col
+        cols = list(evaluation_data)
+        cols.insert(6, cols.pop(cols.index('mall_id')))
+        evaluation_data = evaluation_data.ix[:, cols]
+
+        print("=========== Stats detecting the total number of malls ===========")
+
+        # # 检测有多少个商场，以及他们的名字
+        # unique_mall = []
+        # idx = 0
+        # for i in range(len(evaluation_data['mall_id'])):
+        #     if evaluation_data['mall_id'][i] not in unique_mall:
+        #         unique_mall.append(evaluation_data['mall_id'][i])
+        #         idx += 1
+        # print("There are a total number of {0} malls and they are:".format(len(unique_mall)))
+        # print(unique_mall)
+        unique_mall = ['m_690', 'm_6587', 'm_5892', 'm_625', 'm_3839', 'm_3739', 'm_1293', 'm_1175', 
+                        'm_2182', 'm_2058', 'm_3871', 'm_3005', 'm_822', 'm_2467', 'm_4406', 'm_909', 
+                        'm_4923', 'm_2224', 'm_2333', 'm_4079', 'm_5085', 'm_2415', 'm_4543', 'm_7168', 
+                        'm_2123', 'm_4572', 'm_1790', 'm_3313', 'm_4459', 'm_1409', 'm_979', 'm_7973', 
+                        'm_1375', 'm_4011', 'm_1831', 'm_4495', 'm_1085', 'm_3445', 'm_626', 'm_8093', 
+                        'm_4828', 'm_6167', 'm_3112', 'm_4341', 'm_622', 'm_4422', 'm_2267', 'm_615', 
+                        'm_4121', 'm_9054', 'm_4515', 'm_1950', 'm_3425', 'm_3501', 'm_4548', 'm_5352', 
+                        'm_3832', 'm_1377', 'm_1621', 'm_1263', 'm_2578', 'm_2270', 'm_968', 'm_1089', 
+                        'm_7374', 'm_2009', 'm_6337', 'm_7601', 'm_623', 'm_5154', 'm_5529', 'm_4168', 
+                        'm_3916', 'm_2878', 'm_9068', 'm_3528', 'm_4033', 'm_3019', 'm_1920', 'm_8344', 
+                        'm_6803', 'm_3054', 'm_8379', 'm_1021', 'm_2907', 'm_4094', 'm_4187', 'm_5076', 
+                        'm_3517', 'm_2715', 'm_5810', 'm_5767', 'm_4759', 'm_5825', 'm_7994', 'm_7523', 
+                        'm_7800']
+        
+        slice_and_output(evaluation_data, unique_mall, is_eval=True)
 if __name__ == '__main__':
     main(sys.argv[1])
