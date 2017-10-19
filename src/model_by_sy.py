@@ -7,7 +7,6 @@ import os
 import data_providers
 import datetime
 
-
 def train(mall_id, timestamp,
         learning_rate=1e-3, 
         num_epoch = 20, 
@@ -164,4 +163,7 @@ if __name__ == '__main__':
         print("================ End training for mall: {0} ================".format(mall_id))
         print("best valid error: ", np.amin(valid_error))
         print("best valid accuracy: ", np.amax(valid_accuracy))
+    
+    print("Finish training: timestamp for this training is: ")
+    print(timestamp)
         

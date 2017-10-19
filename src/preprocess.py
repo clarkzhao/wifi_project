@@ -196,7 +196,7 @@ def slice_and_output(input_df, unique_mall, is_eval=False):
         else:
             # evaluation sets 
 
-            # get bssids from csv, chose valid because of smalle size 
+            # get bssids from csv, chose valid because of smaller size 
             path_valid = os.path.join(os.path.dirname(os.getcwd()), 'data', df.iloc[-1,6] + '-valid.csv')
             valid_data = pd.read_csv(path_valid, delimiter=',')
             print("=========== Successfully loading valid data ===========")

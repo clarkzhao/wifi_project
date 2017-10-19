@@ -196,3 +196,22 @@ optimizer：Adam
 ### Feedback to xiaohao:
 
 1. 那就照你说的做吧，研究一下VAE，而我就不和你看重复的了，我后天如何用集成学习（Boost等等）训练多个小模型，最后集合成一个强模型（这个方法在数据比赛中非常常用），以及Cross validation等等的方法。
+
+
+
+## 2017-10-19 14:56:34 by SY
+
+### 开发进度
+
+1. 总体上完成了昨日的计划，等待18:00的排名，看看有没有bug
+2. 增加了Option 3 在`preprocess.py`中，用来预处理evalution data，注意evalution data和原始训练数据略有不同，比如shop_id的位置，等等。为了今后处理方便统一了格式。以及要保留的bssids要从已经生成的valid数据里读取。
+3. 在`model_by_sy.py`中，增加了可以保存模型的功能，每个模型训练20个epoch，只有valid_error最小的模型会被留下。
+4. 在`eval.py`中，我们首先要改动一个变量`timestamp_from_training`就是刚刚训练时生成的时间戳，告诉电脑哪个文件夹找。
+
+
+
+### 未来计划
+
+1. 增加模型复杂度，等待vae效果，但是受限于97个子样本的小容量，过于复杂的模型可能无法收敛。
+2. 研究集成学习（Boost等等）
+

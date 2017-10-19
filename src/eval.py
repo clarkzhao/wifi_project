@@ -18,9 +18,9 @@ def fully_connected_layer(inputs, input_dim, output_dim, nonlinearity=tf.nn.relu
     outputs = nonlinearity(tf.matmul(inputs, weights) + biases)
     return outputs
 
-def eval(mall_id):
+def eval(mall_id, timestamp):
     exp_dir = os.path.join(os.path.dirname(os.getcwd()), 'data', 'saved_models')
-    checkpoint_dir = os.path.join(exp_dir, 'checkpoints')
+    checkpoint_dir = os.path.join(exp_dir, timestamp, 'checkpoints')
     # run_stats = np.load(os.path.join(checkpoint_dir, mall_id, 'run.npz'))
     # print(run_stats)
     model_path = os.path.join(checkpoint_dir, mall_id, 'model.ckpt.meta')
@@ -59,7 +59,7 @@ def eval(mall_id):
 
     # Starts predictions 
     with tf.Session(graph=graph) as session:
-        saver.restore(session,  os.path.join(checkpoint_dir, mall_id, 'model.ckpt-30'))
+        saver.restore(session,  os.path.join(checkpoint_dir, mall_id, 'model.ckpt'))
         feed_dict = {inputs: eval_data.inputs}
         predictions = session.run([outputs], feed_dict)
         print(predictions[0].shape)
@@ -68,6 +68,9 @@ def eval(mall_id):
     return out
 
 if __name__ == '__main__':
+    # 这告诉电脑，去哪个文件夹找训练好的模型, 得根据不同训练的时间改动
+    timestamp_from_training = '2017-10-19_14-36-17' 
+    
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     valid_mall_id = ['m_690', 'm_6587', 'm_5892', 'm_625', 'm_3839', 'm_3739', 
                             'm_1293', 'm_1175', 'm_2182', 'm_2058', 'm_3871', 'm_3005', 
@@ -95,7 +98,7 @@ if __name__ == '__main__':
     i = 0
     for mall_id in valid_mall_id:
         print("================ Start evaluation for mall: {0} ================".format(mall_id))
-        out = eval(mall_id)
+        out = eval(mall_id, timestamp_from_training)
         if i == 0:
             all = out
         else:
