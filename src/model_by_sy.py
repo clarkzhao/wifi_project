@@ -9,9 +9,9 @@ import datetime
 
 def train(mall_id, timestamp,
         learning_rate=1e-3, 
-        num_epoch = 20, 
-        num_hidden_1 = 256):
-
+        num_epoch = 10, 
+        num_hidden_1 = 256,
+        num_hidden_2 = 128):
     def fully_connected_layer(inputs, input_dim, output_dim, nonlinearity=tf.nn.relu):
         weights = tf.Variable(
             tf.truncated_normal(
@@ -25,6 +25,7 @@ def train(mall_id, timestamp,
         train_data = data_providers.WIFIDataProvider(mall_id, 'train', batch_size=64)
         valid_data = data_providers.WIFIDataProvider(mall_id, 'valid', batch_size=64)
 
+    DROPOUT = 0.80 # Dropout, probability to keep units
     num_input = train_data.inputs.shape[1] # WIFI data input 
     num_output = train_data.num_classes
 
@@ -33,10 +34,14 @@ def train(mall_id, timestamp,
         with tf.name_scope('data'):
             inputs = tf.placeholder(tf.float32, [None, num_input], 'inputs')
             targets = tf.placeholder(tf.float32, [None, num_output], 'targets')
+        keep_prob = tf.placeholder(tf.float32)
         with tf.name_scope('fc-layer-1'):
             hidden_1 = fully_connected_layer(inputs, num_input, num_hidden_1)
+            hidden_1 = tf.nn.dropout(hidden_1, keep_prob)
+        with tf.name_scope('fc-layer-2'):
+            hidden_2 = fully_connected_layer(hidden_1, num_hidden_1, num_hidden_2)
         with tf.name_scope('output-layer'):
-            outputs = fully_connected_layer(hidden_1, num_hidden_1, num_output, tf.identity)
+            outputs = fully_connected_layer(hidden_2, num_hidden_2, num_output, tf.identity)
 
         with tf.name_scope('error'):
             error = tf.reduce_mean(
@@ -64,24 +69,19 @@ def train(mall_id, timestamp,
             os.makedirs(exp_dir)
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
-        # train_writer = tf.summary.FileWriter(os.path.join(exp_dir, 'train-summaries'))
-        # valid_writer = tf.summary.FileWriter(os.path.join(exp_dir, 'valid-summaries'))
 
         init = tf.global_variables_initializer()
         
-    #     log_dir = os.path.join(os.path.dirname(os.getcwd()), '', 'ccf_first_round_shop_info.csv')
-    #     train_writer = tf.summary.FileWriter(log_dir + '/train', graph=graph)
-    #     valid_writer = tf.summary.FileWriter(log_dir + '/valid', graph=graph)
-
         sess = tf.InteractiveSession(graph=graph)
         
         valid_inputs = valid_data.inputs
         valid_targets = valid_data.to_one_of_k(valid_data.targets)
         sess.run(init)
 
-        # 'Saver' op to save and restore all the variables
+        # 'Saver' op to save and restore all the variables, only keep the best model to save storage space
         saver = tf.train.Saver(max_to_keep=1)
 
+        # to store model performance for future analysis
         train_accuracy = np.zeros(num_epoch)
         train_error = np.zeros(num_epoch)
         valid_accuracy = np.zeros(num_epoch)
@@ -96,25 +96,17 @@ def train(mall_id, timestamp,
                 index = e * train_data.num_batches + b
                 _, batch_error, batch_acc, summary = sess.run(
                     [train_step, error, accuracy, summary_op], 
-                    feed_dict={inputs: input_batch, targets: target_batch})
-    #             train_writer.add_summary(summary, index)
-                # train_err += batch_error
-                # train_acc += batch_acc
-                # train_writer.add_summary(summary, step)
+                    feed_dict={inputs: input_batch, targets: target_batch, keep_prob: DROPOUT})
                 train_error[e] += batch_error
                 train_accuracy[e] += batch_acc
-    #             if index % 50 == 0:
-    #                 valid_summary = sess.run(
-    #                 summary_op, feed_dict={inputs: valid_inputs, targets: valid_targets})
-    #                 valid_writer.add_summary(valid_summary, index)
-            # train_err /= train_data.num_batches
-            # train_acc /= train_data.num_batches
-                    # normalise running means by number of batches
+
             train_error[e] /= train_data.num_batches
             train_accuracy[e] /= train_data.num_batches
             # Validation on model when finishing one epoch 
             valid_error[e], valid_accuracy[e] = sess.run([error, accuracy], 
-                                            feed_dict={inputs: valid_inputs, targets: valid_targets})
+                                            feed_dict={inputs: valid_inputs, 
+                                            targets: valid_targets,
+                                            keep_prob: 1.})
             if e % 5 == 0:
                 print('End of epoch {0:02d}: err(train)={1:.4f} acc(train)={2:.4f}'
                         .format(e + 1, train_error[e], train_accuracy[e]))
@@ -122,7 +114,7 @@ def train(mall_id, timestamp,
                         .format(valid_error[e], valid_accuracy[e]))
             
             if valid_error[e] <= np.amin(valid_error[:e+1]):
-                print("found better model")
+                print("found better model in epoch: ", e+1)
                 print("      validation error: ", valid_error[e])
                 print("      validation accuracy: ", valid_accuracy[e])
                 saver.save(sess, os.path.join(checkpoint_dir, mall_id, 'model.ckpt'))

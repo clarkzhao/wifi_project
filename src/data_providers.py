@@ -207,12 +207,9 @@ class WIFIDataProvider(DataProvider):
         all_data_loaded = pd.read_csv(all_data_path, delimiter = ',')
 
         # get number of classes
-        self.num_classes = 0
-        self.shop_list = []
-        for shop_id in all_data_loaded['shop_id']:
-            if shop_id not in self.shop_list:
-                self.shop_list.append(shop_id)
-                self.num_classes += 1
+        shop_in_mall = np.load('shop_in_mall.npy').item()
+        self.num_classes = len(shop_in_mall[mall_id])
+        self.shop_list = shop_in_mall[mall_id]
 #         assert os.path.isfile(self.num_classes > 0), (
 #             'number of shop id is zero: '
 #         )  

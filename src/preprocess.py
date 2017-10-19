@@ -27,7 +27,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-KEEP_PER = 5e-4
+KEEP_PER = 1e-3
 SEED = 123456
 
 def filter_bssid(input_df, keep_percentage = KEEP_PER):
