@@ -20,7 +20,7 @@
 
       *  验证集，后20%的子数据集
       *  每个子数据集的所以wifi信号强度一起标准化
-      *  只包含wifi features
+      *  只包含wifi features，预处理常数***keep_per = 5e-4***
 
    *  预测集
 
