@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import division, print_function, absolute_import
 
 import tensorflow as tf
@@ -6,12 +8,13 @@ import matplotlib.pyplot as plt
 import os
 import data_providers
 import datetime
+from constant import VALID_MALL_ID
 
 def train(mall_id, timestamp,
         learning_rate=1e-3, 
         num_epoch = 10, 
         num_hidden_1 = 256,
-        num_hidden_2 = 128):
+        num_hidden_2 = 256):
     def fully_connected_layer(inputs, input_dim, output_dim, nonlinearity=tf.nn.relu):
         weights = tf.Variable(
             tf.truncated_normal(
@@ -22,8 +25,8 @@ def train(mall_id, timestamp,
         return outputs
         
     with tf.name_scope('input'):
-        train_data = data_providers.WIFIDataProvider(mall_id, 'train', batch_size=64)
-        valid_data = data_providers.WIFIDataProvider(mall_id, 'valid', batch_size=64)
+        train_data = data_providers.WIFIDataProviderLatLongAdded(mall_id, 'train', batch_size=64)
+        valid_data = data_providers.WIFIDataProviderLatLongAdded(mall_id, 'valid', batch_size=64)
 
     DROPOUT = 0.80 # Dropout, probability to keep units
     num_input = train_data.inputs.shape[1] # WIFI data input 
@@ -136,24 +139,7 @@ def train(mall_id, timestamp,
 
 if __name__ == '__main__':
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    valid_mall_id = ['m_690', 'm_6587', 'm_5892', 'm_625', 'm_3839', 'm_3739', 
-                            'm_1293', 'm_1175', 'm_2182', 'm_2058', 'm_3871', 'm_3005', 
-                            'm_822', 'm_2467', 'm_4406', 'm_909', 'm_4923', 'm_2224', 
-                            'm_2333', 'm_4079', 'm_5085', 'm_2415', 'm_4543', 'm_7168', 
-                            'm_2123', 'm_4572', 'm_1790', 'm_3313', 'm_4459', 'm_1409', 
-                            'm_979', 'm_7973', 'm_1375', 'm_4011', 'm_1831', 'm_4495', 
-                            'm_1085', 'm_3445', 'm_626', 'm_8093', 'm_4828', 'm_6167', 
-                            'm_3112', 'm_4341', 'm_622', 'm_4422', 'm_2267', 'm_615', 
-                            'm_4121', 'm_9054', 'm_4515', 'm_1950', 'm_3425', 'm_3501', 
-                            'm_4548', 'm_5352', 'm_3832', 'm_1377', 'm_1621', 'm_1263', 
-                            'm_2578', 'm_2270', 'm_968', 'm_1089', 'm_7374', 'm_2009', 
-                            'm_6337', 'm_7601', 'm_623', 'm_5154', 'm_5529', 'm_4168', 
-                            'm_3916', 'm_2878', 'm_9068', 'm_3528', 'm_4033', 'm_3019', 
-                            'm_1920', 'm_8344', 'm_6803', 'm_3054', 'm_8379', 'm_1021', 
-                            'm_2907', 'm_4094', 'm_4187', 'm_5076', 'm_3517', 'm_2715', 
-                            'm_5810', 'm_5767', 'm_4759', 'm_5825', 'm_7994', 'm_7523', 
-                            'm_7800']
-
+    valid_mall_id = VALID_MALL_ID
     num_valid_accumulated = 0
     valid_accuracy_accumulated = 1.
     i = 0

@@ -12,8 +12,8 @@ import gzip
 import numpy as np
 import os
 import pandas as pd
+from constant import VALID_MALL_ID, DEFAULT_SEED, SHOP_IN_MALL, TRAIN_DATA_DIR
 
-DEFAULT_SEED = 123456
 
 class DataProvider(object):
     """Generic data provider."""
@@ -156,23 +156,7 @@ class WIFIDataProvider(DataProvider):
             rng (RandomState): A seeded random number generator.
         """
         # check a valid which_set was provided
-        valid_mall_id = ['m_690', 'm_6587', 'm_5892', 'm_625', 'm_3839', 'm_3739', 
-                           'm_1293', 'm_1175', 'm_2182', 'm_2058', 'm_3871', 'm_3005', 
-                           'm_822', 'm_2467', 'm_4406', 'm_909', 'm_4923', 'm_2224', 
-                           'm_2333', 'm_4079', 'm_5085', 'm_2415', 'm_4543', 'm_7168', 
-                           'm_2123', 'm_4572', 'm_1790', 'm_3313', 'm_4459', 'm_1409', 
-                           'm_979', 'm_7973', 'm_1375', 'm_4011', 'm_1831', 'm_4495', 
-                           'm_1085', 'm_3445', 'm_626', 'm_8093', 'm_4828', 'm_6167', 
-                           'm_3112', 'm_4341', 'm_622', 'm_4422', 'm_2267', 'm_615', 
-                           'm_4121', 'm_9054', 'm_4515', 'm_1950', 'm_3425', 'm_3501', 
-                           'm_4548', 'm_5352', 'm_3832', 'm_1377', 'm_1621', 'm_1263', 
-                           'm_2578', 'm_2270', 'm_968', 'm_1089', 'm_7374', 'm_2009', 
-                           'm_6337', 'm_7601', 'm_623', 'm_5154', 'm_5529', 'm_4168', 
-                           'm_3916', 'm_2878', 'm_9068', 'm_3528', 'm_4033', 'm_3019', 
-                           'm_1920', 'm_8344', 'm_6803', 'm_3054', 'm_8379', 'm_1021', 
-                           'm_2907', 'm_4094', 'm_4187', 'm_5076', 'm_3517', 'm_2715', 
-                           'm_5810', 'm_5767', 'm_4759', 'm_5825', 'm_7994', 'm_7523', 
-                           'm_7800']
+        valid_mall_id = VALID_MALL_ID
 
         assert mall_id in valid_mall_id, (
                                'Expected mall to be in {0} '
@@ -195,24 +179,17 @@ class WIFIDataProvider(DataProvider):
         # the csv file should put int ./data/ and the source file should be in ./src/
         # when using the source file, the current directory should be in ./src/ 
         # otherwise, please change the data_path 
-        data_path = os.path.join(os.path.dirname(os.getcwd()), 'data', '{0}-{1}.csv'.format(self.mall_id, self.which_set))
+        data_path = os.path.join(TRAIN_DATA_DIR, '{0}-{1}.csv'.format(self.mall_id, self.which_set))
         assert os.path.isfile(data_path), (
             'Data file does not exist at expected path: ' + data_path
         )
 
-
-        # load data from compressed numpy file
+        # load data from compressed csv file
         loaded = pd.read_csv(data_path, delimiter = ',')
-        all_data_path = os.path.join(os.path.dirname(os.getcwd()), 'data', '{0}.csv'.format(self.mall_id))
-        all_data_loaded = pd.read_csv(all_data_path, delimiter = ',')
 
         # get number of classes
-        shop_in_mall = np.load('shop_in_mall.npy').item()
-        self.num_classes = len(shop_in_mall[mall_id])
-        self.shop_list = shop_in_mall[mall_id]
-#         assert os.path.isfile(self.num_classes > 0), (
-#             'number of shop id is zero: '
-#         )  
+        self.shop_list = SHOP_IN_MALL[mall_id]
+        self.num_classes = len(self.shop_list)
         
         inputs = loaded.iloc[:, 8:].values # the inputs is just wifi information and they are in the columns of [:, 8:]
         self.row_id = None
@@ -231,6 +208,105 @@ class WIFIDataProvider(DataProvider):
     def next(self):
         """Returns next data batch or raises `StopIteration` if at end."""
         inputs_batch, targets_batch = super(WIFIDataProvider, self).next()
+        return inputs_batch, self.to_one_of_k(targets_batch)
+
+    def to_one_of_k(self, targets):
+        """Converts integer coded class target to 1 of K coded targets.
+        Args:
+            int_targets (ndarray): Array of integer coded class targets (i.e.
+                where an integer from 0 to `num_classes` - 1 is used to
+                indicate which is the correct class). This should be of shape
+                (num_data,).
+        Returns:
+            Array of 1 of K coded targets i.e. an array of shape
+            (num_data, num_classes) where for each row all elements are equal
+            to zero except for the column corresponding to the correct class
+            which is equal to one.
+        """        
+        
+        one_of_k_targets = np.zeros((targets.shape[0], self.num_classes))
+        for i in range(targets.shape[0]):
+            one_of_k_targets[i, self.shop_list.index(targets[i])] = 1
+        return one_of_k_targets
+
+class WIFIDataProviderLatLongAdded(DataProvider):
+    """Data provider for WiFi project data information."""
+
+    def __init__(self, mall_id, which_set='train', is_eval=False, batch_size=128, max_num_batches=-1,
+                 shuffle_order=True, rng=None):
+        """Create a new WiFi data provider object.
+        Args:
+            mall_id: The mall_id that is used to locate the sub-data sets.
+            which_set: One of 'train', 'valid' or 'eval'. Determines which
+                portion of the WiFi data this object should provide.
+            is_eval: whether the datasets is for evaluation
+            batch_size (int): Number of data points to include in each batch.
+            max_num_batches (int): Maximum number of batches to iterate over
+                in an epoch. If `max_num_batches * batch_size > num_data` then
+                only as many batches as the data can be split into will be
+                used. If set to -1 all of the data will be used.
+            shuffle_order (bool): Whether to randomly permute the order of
+                the data before each epoch.
+            rng (RandomState): A seeded random number generator.
+        """
+        # check a valid which_set was provided
+        valid_mall_id = VALID_MALL_ID
+
+        assert mall_id in valid_mall_id, (
+                               'Expected mall to be in {0} '
+                               'Got {1}'.format(valid_mall_id, mall_id)
+                           )
+        if not is_eval:
+            assert which_set in ['train', 'valid'], (
+                'Expected which_set to be either train, valid, eval. '
+                'Got {0}'.format(which_set)
+            )
+        else:
+            assert which_set == 'eval', (
+                'Expected which_set to be eval. '
+                'Got {0}'.format(which_set)
+            )
+        self.which_set = which_set
+        self.mall_id = mall_id
+        # construct path to data using os.path.join to ensure the correct path
+        # separator for the current platform / OS is used
+        # the csv file should put int ./data/ and the source file should be in ./src/
+        # when using the source file, the current directory should be in ./src/ 
+        # otherwise, please change the data_path 
+        data_path = os.path.join(TRAIN_DATA_DIR, '{0}-{1}.csv'.format(self.mall_id, self.which_set))
+        assert os.path.isfile(data_path), (
+            'Data file does not exist at expected path: ' + data_path
+        )
+
+        # load data from compressed csv file
+        loaded = pd.read_csv(data_path, delimiter = ',')
+
+        # get number of classes
+        self.shop_list = SHOP_IN_MALL[mall_id]
+        self.num_classes = len(self.shop_list)
+
+
+        feature_index = [i for i in range(8, loaded.shape[1])] # Bssids features
+        for i in [5, 4]:  # Add longitude and latitude features
+            feature_index.insert(0, i)
+        # the inputs containts bssids strength with longitude and latitude
+        inputs = loaded.iloc[:, feature_index].values 
+        self.row_id = None
+        if not is_eval:
+            targets = loaded.loc[:, 'shop_id'].values
+            self.one_of_k_targets = self.to_one_of_k(targets)
+        else:
+            targets = np.zeros([inputs.shape[0]])
+            self.one_of_k_targets = np.zeros([inputs.shape[0], self.num_classes])
+            self.row_id = loaded.loc[:, 'row_id'].values
+        inputs = inputs.astype(np.float32)
+        # pass the loaded data to the parent class __init__
+        super(WIFIDataProviderLatLongAdded, self).__init__(
+            inputs, targets, batch_size, max_num_batches, shuffle_order, rng)
+
+    def next(self):
+        """Returns next data batch or raises `StopIteration` if at end."""
+        inputs_batch, targets_batch = super(WIFIDataProviderLatLongAdded, self).next()
         return inputs_batch, self.to_one_of_k(targets_batch)
 
     def to_one_of_k(self, targets):

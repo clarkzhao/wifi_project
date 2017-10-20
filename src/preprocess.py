@@ -18,7 +18,10 @@ Usage:
     
     you can change constant KEEP_PER to modify the number of wifi strength feature to expand, 
     higher the value, lower the number of features to expand.
+
+    The splited data will be save to wifi_project/data/input/
 """
+
 from __future__ import division, print_function # Imports from __future__ since we're running Python 2
 import os
 import sys
@@ -26,8 +29,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from constant import VALID_MALL_ID, TRAIN_DATA_DIR
 
-KEEP_PER = 1e-3
+KEEP_PER = 5e-4
 SEED = 123456
 
 def filter_bssid(input_df, keep_percentage = KEEP_PER):
@@ -87,7 +91,12 @@ def expand_wifi_feature(input_df, bssids):
         bssid2strength = {}
         for data in wifi_info.split(';'):
             bssid, strength, _ = data.split('|')
-            bssid2strength[bssid] = int(strength)
+            if bssid not in bssid2strength.keys():
+                bssid2strength[bssid] = int(strength)
+            else:
+                # If we found the same bssid in one scan, we chose the stronger strength
+                if int(strength) > bssid2strength[bssid]:
+                    bssid2strength[bssid] = int(strength)
         all_bssid = bssid2strength.keys()
         for bssid in all_bssid:
             if bssid in bssids:
@@ -173,34 +182,38 @@ def slice_and_output(input_df, unique_mall, is_eval=False):
         train_sets.append(input_df_grouped.get_group(mall_id))
         print(mall_id, train_sets[-1].shape)
 
+    input_data_dir = TRAIN_DATA_DIR
+    if not os.path.exists(input_data_dir):
+        os.makedirs(input_data_dir)
+
     print("=========== Starts preprocess and output data as CSV file for training and validation  ===========")
     # 对每个训练集输出成csv, 包括总的数据，train sets，validation sets
-    for df in train_sets[1:]:
-        print("=========== Process mall: {0}  ===========".format(df.iloc[-1,6]))
+    for df in train_sets:
+        mall_id = df.iloc[-1,6]
+        print("=========== Process mall: {0}  ===========".format(mall_id))
         if not is_eval:
             # valid or train sets 
             bssids = filter_bssid(df)
             df = expand_wifi_feature(df, bssids)
             standardize(df, bssids)
-            path = os.path.join(os.path.dirname(os.getcwd()), 'data', df.iloc[-1,6]+'.csv')
-            df.to_csv(path)            
-            print("Successfully stored data as {0} with shape of {1}".format(path, df.shape))
+            path = os.path.join(input_data_dir, mall_id +'.csv')
+            # df.to_csv(path)            
+            # print("Successfully stored data as {0} with shape of {1}".format(path, df.shape))
             split_number=int(np.floor(df.shape[0]*0.8))
             print('split number for train and valid: ', split_number)
-            train_df = df.iloc[0:split_number]
-            path = os.path.join(os.path.dirname(os.getcwd()), 'data', df.iloc[-1,6] + '-train.csv')
-            train_df.to_csv(path)
-            print("Successfully stored training data as {0} with shape of {1}".format(path, train_df.shape))
-            valid_df = df.iloc[split_number:]
-            path = os.path.join(os.path.dirname(os.getcwd()), 'data', df.iloc[-1,6] + '-valid.csv')
-            print("Successfully stored valid data as {0} with shape of {1}".format(path, valid_df.shape))
-            valid_df.to_csv(path)
-            del df, train_df, valid_df
+            # train_df = df.iloc[0:split_number]
+            path = os.path.join(input_data_dir,  mall_id + '-train.csv')
+            df.iloc[0:split_number].to_csv(path)
+            print("Successfully stored training data as {0}".format(path))
+            # valid_df = df.iloc[split_number:]
+            path = os.path.join(input_data_dir, mall_id + '-valid.csv')
+            print("Successfully stored valid data as {0}".format(path))
+            df.iloc[split_number:].to_csv(path)
+            del df
         else:
             # evaluation sets 
-
             # get bssids from csv, chose valid because of smaller size 
-            path_valid = os.path.join(os.path.dirname(os.getcwd()), 'data', df.iloc[-1,6] + '-valid.csv')
+            path_valid = os.path.join(input_data_dir, mall_id + '-valid.csv')
             valid_data = pd.read_csv(path_valid, delimiter=',')
             print("=========== Successfully loading valid data ===========")
             bssids = list(valid_data.iloc[:,8:])
@@ -208,9 +221,8 @@ def slice_and_output(input_df, unique_mall, is_eval=False):
             # expand features and standardize
             df = expand_wifi_feature(df, bssids)
             standardize(df, bssids)
-
             # output to csv
-            path = os.path.join(os.path.dirname(os.getcwd()), 'data', df.iloc[-1,6] + '-eval.csv')
+            path = os.path.join(input_data_dir, mall_id + '-eval.csv')
             df.to_csv(path)            
             print("Successfully stored data as {0} with shape of {1}".format(path, df.shape))
 
@@ -282,29 +294,8 @@ def main(argv):
 
         print("=========== Stats detecting the total number of malls ===========")
 
-        # # 检测有多少个商场，以及他们的名字
-        # unique_mall = []
-        # idx = 0
-        # for i in range(len(evaluation_data['mall_id'])):
-        #     if evaluation_data['mall_id'][i] not in unique_mall:
-        #         unique_mall.append(evaluation_data['mall_id'][i])
-        #         idx += 1
-        # print("There are a total number of {0} malls and they are:".format(len(unique_mall)))
-        # print(unique_mall)
-        unique_mall = ['m_690', 'm_6587', 'm_5892', 'm_625', 'm_3839', 'm_3739', 'm_1293', 'm_1175', 
-                        'm_2182', 'm_2058', 'm_3871', 'm_3005', 'm_822', 'm_2467', 'm_4406', 'm_909', 
-                        'm_4923', 'm_2224', 'm_2333', 'm_4079', 'm_5085', 'm_2415', 'm_4543', 'm_7168', 
-                        'm_2123', 'm_4572', 'm_1790', 'm_3313', 'm_4459', 'm_1409', 'm_979', 'm_7973', 
-                        'm_1375', 'm_4011', 'm_1831', 'm_4495', 'm_1085', 'm_3445', 'm_626', 'm_8093', 
-                        'm_4828', 'm_6167', 'm_3112', 'm_4341', 'm_622', 'm_4422', 'm_2267', 'm_615', 
-                        'm_4121', 'm_9054', 'm_4515', 'm_1950', 'm_3425', 'm_3501', 'm_4548', 'm_5352', 
-                        'm_3832', 'm_1377', 'm_1621', 'm_1263', 'm_2578', 'm_2270', 'm_968', 'm_1089', 
-                        'm_7374', 'm_2009', 'm_6337', 'm_7601', 'm_623', 'm_5154', 'm_5529', 'm_4168', 
-                        'm_3916', 'm_2878', 'm_9068', 'm_3528', 'm_4033', 'm_3019', 'm_1920', 'm_8344', 
-                        'm_6803', 'm_3054', 'm_8379', 'm_1021', 'm_2907', 'm_4094', 'm_4187', 'm_5076', 
-                        'm_3517', 'm_2715', 'm_5810', 'm_5767', 'm_4759', 'm_5825', 'm_7994', 'm_7523', 
-                        'm_7800']
-        
+        unique_mall = VALID_MALL_ID
         slice_and_output(evaluation_data, unique_mall, is_eval=True)
+
 if __name__ == '__main__':
     main(sys.argv[1])
