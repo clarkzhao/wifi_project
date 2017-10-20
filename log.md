@@ -224,3 +224,16 @@ optimizer：Adam
 1. 修复了在evaluation中shuffle数据导致row_id不匹配的bug
 2. 修改了DNN模型，注意训练模型和验证模型的tensor计算图必须完全一致（这部分代码可以放一起，增加代码的鲁棒性，以后再改），不然会有bug。
 3. 在原始文件夹增加了一个`shop_in_mall.npy`文件，是一个python字典，key是`mall_id`，value是一个包含所有`shop_id`的list，这数据是从原始商店数据中提取的，为了方便的给其他代码引用，我就索性放在src里了。代码也进行了相应的简化。
+
+
+
+# 2017年10月20日22:15:37
+
+## 开发进度
+
+1. 将原文件中的constants集合在`constant.py`上
+2. 修改了preprocess，减少了以一半的存储量
+3. 验证了当预处理中，**常数keep_per增加到1e-3时**，features总数量大幅减少约50%，模型效果减少约10%
+4. 等待hidden_layer_2=256是模型test结果
+5. 修复了preprocess中的bug，因为一次scan中，可能存在多个相同的bssids，原来的方式是保存最后一个，该相同bssid的强度，目前方法是如果一次scan，扫描到多个相同的bssids，选取强度大的那个。
+
