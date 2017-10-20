@@ -87,7 +87,7 @@ def train(mall_id, timestamp,
         valid_accuracy = np.zeros(num_epoch)
         valid_error = np.zeros(num_epoch)
         time_cost = np.zeros(num_epoch)
-
+        num_valid = valid_data.inputs.shape[0]
 
         for e in range(num_epoch):
             #Training sets
@@ -120,15 +120,19 @@ def train(mall_id, timestamp,
                 saver.save(sess, os.path.join(checkpoint_dir, mall_id, 'model.ckpt'))
                 print("saved model")
                 # Save model weights to disk
+
         np.savez_compressed(
             os.path.join(checkpoint_dir, mall_id, 'run.npz'),
             train_error=train_error,
             train_accuracy=train_accuracy,
             valid_error=valid_error,
             valid_accuracy=valid_accuracy,
-            time_cost = time_cost
+            time_cost = time_cost,
+            num_valid = num_valid
         )
-        return valid_error, valid_accuracy
+        best_valid_error = np.amin(valid_error)
+        correspond_valid_acc = valid_accuracy[np.argmin(valid_error)]
+        return best_valid_error, correspond_valid_acc, num_valid
 
 if __name__ == '__main__':
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -149,13 +153,26 @@ if __name__ == '__main__':
                             'm_2907', 'm_4094', 'm_4187', 'm_5076', 'm_3517', 'm_2715', 
                             'm_5810', 'm_5767', 'm_4759', 'm_5825', 'm_7994', 'm_7523', 
                             'm_7800']
+
+    num_valid_accumulated = 0
+    valid_accuracy_accumulated = 1.
+    i = 0
     for mall_id in valid_mall_id:
+        print("\n")
         print("================ Start training for mall: {0} ================".format(mall_id))
-        valid_error, valid_accuracy = train(mall_id, timestamp)
+        best_valid_error, correspond_valid_acc, num_valid = train(mall_id, timestamp)
         print("================ End training for mall: {0} ================".format(mall_id))
-        print("best valid error: ", np.amin(valid_error))
-        print("best valid accuracy: ", np.amax(valid_accuracy))
-    
+        print("best valid error: ", best_valid_error)
+        print("corresponding valid accuracy: ", correspond_valid_acc)
+        if i == 0:
+            num_valid_accumulated = num_valid
+            valid_accuracy_accumulated = correspond_valid_acc
+        else:
+            valid_accuracy_accumulated = valid_accuracy_accumulated * num_valid_accumulated + correspond_valid_acc * num_valid
+            num_valid_accumulated += num_valid
+            valid_accuracy_accumulated /= num_valid_accumulated
+        print("Overall valid accuracy for all models trained so far is: {0:.4f}".format(valid_accuracy_accumulated))
+        i += 1
     print("Finish training: timestamp for this training is: ")
     print(timestamp)
         
