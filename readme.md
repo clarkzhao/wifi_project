@@ -2,7 +2,7 @@
 
 # 模型表现
 
-### DNN-MLP classifier
+### 1. DNN-MLP classifier
 
 *  2017年10月19日，晚
 
@@ -41,7 +41,7 @@
    *  ***number of epoch per training*** = 10
    *  weight initializer: `tf.truncated_normal([input_dim, output_dim], stddev=2. / (input_dim + output_dim)**0.5),  'weights')`
 
-### 可提升空间
+#### 可提升空间
 
 1. 使用Stacked autoencoder
 
@@ -51,11 +51,21 @@
 
 4. 集成学习
 
-5. K-nearest-neibour
+5. K-nearest-neighbour
 
    ​
 
+### 2. DNN-MLP classifier with latitude and longitude
 
+*  2017年10月20日下午
+*  天池测试准确率： 0.8390
+*  与第一个模型唯一不同之处在于增加了两个feature，longitude 和latitude
+
+#### 思考
+
+1. 直接在几百个wifi特征中加入两个位置特征并不多显著的提高DNN的效果，所以下一个方向是Stacked autoencoder。因为autoencoder可以大幅降低模型维度。
+
+   ​
 
 
 
