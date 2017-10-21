@@ -20,7 +20,7 @@
 
       *  验证集，后20%的子数据集
       *  每个子数据集的所以wifi信号强度一起标准化
-      *  只包含wifi features，预处理常数***keep_per = 5e-4***
+      *  只包含wifi features，预处理常数 ***keep_per = 5e-4***
 
    *  预测集
 
@@ -58,14 +58,20 @@
 ### 2. DNN-MLP classifier with latitude and longitude
 
 *  2017年10月20日下午
-*  天池测试准确率： 0.8390
+*  ***天池测试准确率： 0.8390***
 *  与第一个模型唯一不同之处在于增加了两个feature，longitude 和latitude
 
 #### 思考
 
 1. 直接在几百个wifi特征中加入两个位置特征并不多显著的提高DNN的效果，所以下一个方向是Stacked autoencoder。因为autoencoder可以大幅降低模型维度。
 
-   ​
+
+
+### 3. DNN-MLP classifier with latitude and longitude
+
+*  2017年10月21日上午
+*  ***天池测试准确率： 0.8398***
+*  与第一个模型唯一不同之处在于第二个hidden layer size = 256。以及用的数据是修复了preprocess的bug之后产生的。bug详情见昨天的log
 
 
 
